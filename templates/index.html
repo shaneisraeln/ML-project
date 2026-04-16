@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Electric Nerve Center</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+    <div class="brand-section">
+        <h1>SYSTEM ALPHA</h1>
+        <p>98.4% Efficiency</p>
+    </div>
+    <nav class="nav-menu">
+        <a href="/" class="nav-item active" style="text-decoration:none;">⚡ Predictor</a>
+        <a href="/analytics" class="nav-item" style="text-decoration:none;">📊 Analytics</a>
+    </nav>
+</aside>
+
+<!-- Main App Content -->
+<main class="app-content">
+    <header>
+        <div class="page-title">
+            <h2>ELECTRIC NERVE CENTER</h2>
+        </div>
+        <div class="header-controls">
+            <span style="color: var(--on-surface-variant); font-size: 0.9rem; margin-right: 20px;">Live Feed &nbsp;&nbsp;&nbsp; Historical Data &nbsp;&nbsp;&nbsp; Grid Topology</span>
+        </div>
+    </header>
+
+    <div class="main-grid">
+        <!-- Hero Card -->
+        <div class="glass-panel">
+            {% set is_red = (color == 'red') %}
+            {% set pulse_class = 'red' if is_red else 'green' %}
+            {% set is_active = True if prediction else False %}
+            {% if not is_active %}{% set pulse_class = 'green' %}{% endif %}
+            
+            <div class="live-status-badge {{ pulse_class }}">
+                <div class="pulse-dot {{ pulse_class }}"></div>
+                Live System Status
+            </div>
+
+            <div class="hero-status {{ pulse_class }}">
+                {% if prediction %}
+                    <h2>{{ prediction.split()[0] }}</h2>
+                    <p>{{ prediction }}</p>
+                {% else %}
+                    <h2>STANDBY</h2>
+                    <p>(Awaiting Input Parameters)</p>
+                {% endif %}
+            </div>
+
+            <div class="status-metrics">
+                <div class="metric">
+                    <h4>Confidence</h4>
+                    <div class="val {{ pulse_class }}">{{ probability if probability else '--%' }}</div>
+                </div>
+                <div class="metric">
+                    <h4>Stability</h4>
+                    <div class="val {{ pulse_class }}">{{ 'Critical' if is_red else '99.2%' if prediction else '--' }}</div>
+                </div>
+                <div class="metric">
+                    <h4>Recommendation</h4>
+                    <div class="text-val">
+                        {% if not prediction %}
+                        Enter model parameters to evaluate grid stability.
+                        {% elif not is_red %}
+                        Grid is operating normally. No intervention required.
+                        {% else %}
+                        Emergency mitigation techniques required immediately. See diagnostics below.
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Predictor Form -->
+        <div class="predictor-panel">
+            <form method="POST" action="/predict">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                    <h3 style="margin:0; font-family: 'Inter'; font-weight: 600;">Model Parameters</h3>
+                    <span style="font-size: 0.8rem; color: var(--primary);">⟲ Refresh</span>
+                </div>
+                
+                <div class="input-grid">
+                    {% for feature in features %}
+                    <div class="input-grp">
+                        <label for="{{ feature }}">{{ feature | replace('_', ' ') }}</label>
+                        <div style="display:flex;">
+                            <input type="number" step="any" id="{{ feature }}" name="{{ feature }}" value="{{ submitted_data[feature][0] if submitted_data else '' }}" required>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <button type="submit" class="btn-primary">⚡ Predict Grid Stress</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Action Plan Cards -->
+    {% if prediction %}
+    <div class="action-cards-container" style="margin-top: 32px;">
+        <div class="section-title">
+            <h3 style="font-family: 'Space Grotesk'; font-size: 1.2rem; color: var(--on-surface);">Diagnostic Actions</h3>
+        </div>
+        <div class="action-cards">
+            {% for action in actions %}
+            {% set is_red = (color == 'red') %}
+            {% set action_pulse = 'red' if is_red else 'green' %}
+            <div class="action-card">
+                <h4><div class="pulse-dot {{ action_pulse }}" style="display: inline-block;"></div> &nbsp; Insight</h4>
+                <p>{{ action }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div style="margin-top:20px; padding: 20px; border-left: 4px solid var(--error); background: var(--surface-container-high); color: var(--on-surface);">
+        {{ error }}
+    </div>
+    {% endif %}
+
+</main>
+
+</body>
+</html>
