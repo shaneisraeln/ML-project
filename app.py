@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import joblib
 import pandas as pd
 import numpy as np
@@ -21,6 +21,54 @@ else:
 @app.route('/', methods=['GET'])
 def index():
     return render_template('index.html', features=feature_names)
+
+@app.route('/api/predict', methods=['POST'])
+def api_predict():
+    if model is None:
+        return jsonify({"error": "Model not found."}), 500
+        
+    try:
+        data = request.json
+        input_data = {}
+        for feature in feature_names:
+            val = data.get(feature)
+            input_data[feature] = [float(val)] if val else [0.0]
+            
+        df_input = pd.DataFrame(input_data)
+        
+        prediction = model.predict(df_input)[0]
+        prob = model.predict_proba(df_input)[0][1]
+        
+        action_plan = []
+        if prediction == 1:
+            status = "BAD STRESS DETECTED"
+            color = "red"
+            
+            if input_data.get('grid_demand', [0])[0] > 50000:
+                action_plan.append("High Grid Demand: Issue broad public appeal for energy conservation.")
+            if input_data.get('solar', [0])[0] < 1000:
+                action_plan.append("Low Solar Generation: Dispatch battery storage or peaker plants.")
+            if input_data.get('wind', [0])[0] < 5000:
+                action_plan.append("Low Wind Generation: Insufficient baseline renewables.")
+            if input_data.get('renewable_share', [0])[0] < 0.2:
+                action_plan.append("Critically Low Renewable Yield: Relying heavily on conventional plants.")
+                
+            if not action_plan:
+                action_plan.append("General network congestion. Monitor closely.")
+        else:
+            status = "NORMAL (No Stress)"
+            color = "green"
+            action_plan.append("Grid is operating normally.")
+            
+        return jsonify({
+            "prediction": status,
+            "probability": f"{prob*100:.1f}%",
+            "actions": action_plan,
+            "color": color,
+            "raw_prob": prob
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 @app.route('/analytics', methods=['GET'])
 def analytics():

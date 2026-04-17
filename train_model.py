@@ -14,6 +14,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import classification_report, accuracy_score, f1_score
+from sklearn.decomposition import PCA
 
 # Base directory — all paths relative to this script's location
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -128,6 +129,32 @@ print(f"Tuned Model F1-Score : {f1_tuned:.4f}")
 print(classification_report(y_test, y_pred_tuned))
 
 # ─────────────────────────────────────────────────────────────
+# SECTION C2: Pipeline WITH PCA (95% Variance)
+# ─────────────────────────────────────────────────────────────
+print("\n" + "="*60)
+print("SECTION C2: RandomForest Pipeline + PCA (95% Variance)")
+print("="*60)
+
+pca_pipeline = Pipeline(steps=[
+    ('preprocessor', ColumnTransformer(transformers=[
+        ('num', StandardScaler(), numeric_features)
+    ])),
+    ('pca', PCA(n_components=0.95, random_state=42)),
+    ('classifier', RandomForestClassifier(random_state=42, n_jobs=-1))
+])
+
+pca_pipeline.fit(X_train, y_train)
+y_pred_pca = pca_pipeline.predict(X_test)
+acc_pca = accuracy_score(y_test, y_pred_pca)
+f1_pca  = f1_score(y_test, y_pred_pca, zero_division=0)
+
+num_components = pca_pipeline.named_steps['pca'].n_components_
+print(f"PCA preserved >=95% of variance using {num_components} components (reduced from {len(numeric_features)} features).")
+print(f"PCA Model Accuracy : {acc_pca:.4f}")
+print(f"PCA Model F1-Score : {f1_pca:.4f}")
+print(classification_report(y_test, y_pred_pca))
+
+# ─────────────────────────────────────────────────────────────
 # SECTION D: Feature Importance
 # ─────────────────────────────────────────────────────────────
 print("\n" + "="*60)
@@ -161,6 +188,7 @@ comparison = pd.DataFrame({
         'RandomForest — No Pipeline (Manual Scaling)',
         'RandomForest — Pipeline (Default Params)',
         'RandomForest — Pipeline + Hyperparameter Tuning',
+        'RandomForest — Pipeline + PCA (95% Variance)',
         'Literature Benchmark (ARIMA-based, ~85% Acc)'   # documented external reference
     ],
     'Accuracy': [
@@ -168,6 +196,7 @@ comparison = pd.DataFrame({
         round(acc_raw, 4),
         None,   # filled below
         round(acc_tuned, 4),
+        round(acc_pca, 4),
         0.85
     ],
     'F1-Score (Bad Stress)': [
@@ -175,6 +204,7 @@ comparison = pd.DataFrame({
         round(f1_raw, 4),
         None,
         round(f1_tuned, 4),
+        round(f1_pca, 4),
         0.71
     ]
 })
@@ -196,20 +226,22 @@ comparison.to_csv(os.path.join(BASE, 'data', 'model_comparison.csv'), index=Fals
 print("\nComparison table saved to 'data/model_comparison.csv'")
 
 # ─────────────────────────────────────────────────────────────
-# SECTION F: Save Best Production Model
+# SECTION F: Save Best Production Model (PCA with Needed Variables)
 # ─────────────────────────────────────────────────────────────
 print("\n" + "="*60)
-print("SECTION F: Saving Best Production Model")
+print("SECTION F: Saving Best Production Model (PCA with Needed Variables)")
 print("="*60)
 
-top_features = ['solar', 'wind', 'renewable_share', 'grid_demand']
+# The user explicitly requested to keep only the needed parameters to avoid UI clutter
+top_features = ['grid_demand', 'solar', 'wind', 'EV_load', 'renewable_share', 'demand_lag_1h']
 
 X_train_top = X_train[top_features]
 
-final_pipeline = Pipeline(steps=[
+pca_pipeline_top = Pipeline(steps=[
     ('preprocessor', ColumnTransformer(transformers=[
         ('num', StandardScaler(), top_features)
     ])),
+    ('pca', PCA(n_components=0.95, random_state=42)),
     ('classifier', RandomForestClassifier(
         n_estimators=search.best_params_.get('classifier__n_estimators', 200),
         max_depth=search.best_params_.get('classifier__max_depth', 10),
@@ -219,7 +251,7 @@ final_pipeline = Pipeline(steps=[
     ))
 ])
 
-final_pipeline.fit(X_train_top, y_train)
-joblib.dump(final_pipeline, os.path.join(BASE, 'model.pkl'))
+pca_pipeline_top.fit(X_train_top, y_train)
+joblib.dump(pca_pipeline_top, os.path.join(BASE, 'model.pkl'))
 joblib.dump(top_features, os.path.join(BASE, 'feature_names.pkl'))
-print("Best tuned model saved to 'model.pkl'. Done.")
+print("PCA model built on necessary features saved to 'model.pkl' and 'feature_names.pkl'. Done.")

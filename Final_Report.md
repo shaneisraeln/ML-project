@@ -172,6 +172,18 @@ The Pipeline approach is superior because:
 - Single `joblib.dump()` saves both scaler and model together
 - Production-ready — the same pipeline object handles new inputs at inference time
 
+### 4.5 Section C2 — RandomForest Pipeline WITH PCA
+
+To focus on only the necessary variables, we fit a Principal Component Analysis (PCA) step within the Scikit-Learn Pipeline.
+Setting `n_components=0.95` extracted the latent components that represent $\ge$ 95% of the dataset's variance. 
+PCA reduced the dimensionality down to 10 principal components from the original 16 features.
+
+Results using top 10 PCA components:
+- Accuracy: 0.9735
+- F1-Score: 0.8759
+
+This approach is beneficial for dimensionality reduction, though keeping all original features (with hyperparameter tuning) slightly maximizes the minority class F1-Score.
+
 ---
 
 ## 5. Comparative Analysis
@@ -182,6 +194,7 @@ The Pipeline approach is superior because:
 | RandomForest — No Pipeline (Manual Scaling) | 0.9941 | 0.9723 |
 | RandomForest — Pipeline (Default Params) | 0.9941 | 0.9723 |
 | RandomForest — Pipeline + Hyperparameter Tuning | 0.9944 | 0.9735 |
+| RandomForest — Pipeline + PCA (95% Variance) | 0.9735 | 0.8759 |
 | Literature Benchmark — ARIMA-based [1] | ~0.8500 | ~0.7100 |
 
 ### Why our model outperforms the benchmark:

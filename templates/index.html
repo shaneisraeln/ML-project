@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Electric Nerve Center</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -11,7 +12,7 @@
 <aside class="sidebar">
     <div class="brand-section">
         <h1>SYSTEM ALPHA</h1>
-        <p>98.4% Efficiency</p>
+        <p>98.4% Efficiency • PCA Enabled</p>
     </div>
     <nav class="nav-menu">
         <a href="/" class="nav-item active" style="text-decoration:none;">⚡ Predictor</a>
@@ -24,109 +25,249 @@
     <header>
         <div class="page-title">
             <h2>ELECTRIC NERVE CENTER</h2>
-        </div>
-        <div class="header-controls">
-            <span style="color: var(--on-surface-variant); font-size: 0.9rem; margin-right: 20px;">Live Feed &nbsp;&nbsp;&nbsp; Historical Data &nbsp;&nbsp;&nbsp; Grid Topology</span>
+            <p>16-Dimensional PCA Inference Engine</p>
         </div>
     </header>
 
     <div class="main-grid">
-        <!-- Hero Card -->
-        <div class="glass-panel">
-            {% set is_red = (color == 'red') %}
-            {% set pulse_class = 'red' if is_red else 'green' %}
-            {% set is_active = True if prediction else False %}
-            {% if not is_active %}{% set pulse_class = 'green' %}{% endif %}
+        <!-- Hero Card (Left) -->
+        <div>
+            <div class="chart-container">
+                <canvas id="interactiveChart"></canvas>
+            </div>
             
-            <div class="live-status-badge {{ pulse_class }}">
-                <div class="pulse-dot {{ pulse_class }}"></div>
-                Live System Status
-            </div>
-
-            <div class="hero-status {{ pulse_class }}">
-                {% if prediction %}
-                    <h2>{{ prediction.split()[0] }}</h2>
-                    <p>{{ prediction }}</p>
-                {% else %}
-                    <h2>STANDBY</h2>
-                    <p>(Awaiting Input Parameters)</p>
-                {% endif %}
-            </div>
-
-            <div class="status-metrics">
-                <div class="metric">
-                    <h4>Confidence</h4>
-                    <div class="val {{ pulse_class }}">{{ probability if probability else '--%' }}</div>
+            <div class="glass-panel" id="status-panel">
+                <div class="live-status-badge green" id="badge-icon">
+                    <div class="pulse-dot green" id="pulse-dot"></div>
+                    <span id="badge-text">Live System Status</span>
                 </div>
-                <div class="metric">
-                    <h4>Stability</h4>
-                    <div class="val {{ pulse_class }}">{{ 'Critical' if is_red else '99.2%' if prediction else '--' }}</div>
+
+                <div class="hero-status green" id="hero-status">
+                    <h2 id="prediction-title">STANDBY</h2>
+                    <p id="prediction-desc">(Awaiting Input Parameters)</p>
                 </div>
-                <div class="metric">
-                    <h4>Recommendation</h4>
-                    <div class="text-val">
-                        {% if not prediction %}
-                        Enter model parameters to evaluate grid stability.
-                        {% elif not is_red %}
-                        Grid is operating normally. No intervention required.
-                        {% else %}
-                        Emergency mitigation techniques required immediately. See diagnostics below.
-                        {% endif %}
+
+                <div class="status-metrics">
+                    <div class="metric">
+                        <h4>Confidence</h4>
+                        <div class="val green" id="prob-val">--%</div>
+                    </div>
+                    <div class="metric">
+                        <h4>Stability</h4>
+                        <div class="val green" id="stability-val">--</div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Predictor Form -->
+        <!-- Predictor Form (Right) -->
         <div class="predictor-panel">
-            <form method="POST" action="/predict">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-                    <h3 style="margin:0; font-family: 'Inter'; font-weight: 600;">Model Parameters</h3>
-                    <span style="font-size: 0.8rem; color: var(--primary);">⟲ Refresh</span>
-                </div>
-                
-                <div class="input-grid">
+            <h3 style="margin-top:0; font-family: 'Inter'; font-weight: 600;">Model Parameters</h3>
+            <form id="predictForm">
+                <div class="input-grid" id="inputGrid">
                     {% for feature in features %}
                     <div class="input-grp">
                         <label for="{{ feature }}">{{ feature | replace('_', ' ') }}</label>
-                        <div style="display:flex;">
-                            <input type="number" step="any" id="{{ feature }}" name="{{ feature }}" value="{{ submitted_data[feature][0] if submitted_data else '' }}" required>
-                        </div>
+                        <input type="number" step="any" id="{{ feature }}" name="{{ feature }}" value="0" required>
                     </div>
                     {% endfor %}
                 </div>
                 
-                <button type="submit" class="btn-primary">⚡ Predict Grid Stress</button>
+                <div style="display: flex; gap: 12px; margin-top: 16px;">
+                    <button type="button" class="btn-primary" id="predictBtn" style="flex: 2;">⚡ Predict Impact</button>
+                    <button type="button" class="btn-secondary" id="resetBtn" style="flex: 1;">↺ Reset</button>
+                </div>
             </form>
         </div>
     </div>
 
     <!-- Action Plan Cards -->
-    {% if prediction %}
-    <div class="action-cards-container" style="margin-top: 32px;">
+    <div class="action-cards-container" style="margin-top: 32px; display: none;" id="actions-container">
         <div class="section-title">
             <h3 style="font-family: 'Space Grotesk'; font-size: 1.2rem; color: var(--on-surface);">Diagnostic Actions</h3>
         </div>
-        <div class="action-cards">
-            {% for action in actions %}
-            {% set is_red = (color == 'red') %}
-            {% set action_pulse = 'red' if is_red else 'green' %}
-            <div class="action-card">
-                <h4><div class="pulse-dot {{ action_pulse }}" style="display: inline-block;"></div> &nbsp; Insight</h4>
-                <p>{{ action }}</p>
-            </div>
-            {% endfor %}
-        </div>
+        <div class="action-cards" id="action-cards-list"></div>
     </div>
-    {% endif %}
-
-    {% if error %}
-    <div style="margin-top:20px; padding: 20px; border-left: 4px solid var(--error); background: var(--surface-container-high); color: var(--on-surface);">
-        {{ error }}
-    </div>
-    {% endif %}
 
 </main>
 
+<script>
+    // Standard Base Levels for comparisons
+    const normalLevels = {
+        'grid_demand': 35000, 'solar': 5000, 'wind': 8000, 'EV_load': 1000,
+        'renewable_share': 0.3, 'demand_lag_1h': 35000, 'demand_lag_24h': 35000,
+        'demand_rolling_mean_24h': 35000, 'demand_rolling_std_24h': 1500,
+        'hour': 12, 'day_of_week': 3, 'month': 6, 'is_weekend': 0,
+        'is_peak_hour': 0, 'solar_change': 0, 'wind_change': 0
+    };
+
+    // Chart.js Setup
+    const ctx = document.getElementById('interactiveChart').getContext('2d');
+    
+    // We will chart only top core features for cleaner aesthetics since 16 is crowded
+    const chartFeatures = ['grid_demand', 'solar', 'wind', 'EV_load', 'demand_lag_1h'];
+    const labels = chartFeatures.map(f => f.replace(/_/g, ' ').toUpperCase());
+
+    const myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Normal Capacity',
+                    data: chartFeatures.map(f => normalLevels[f]),
+                    backgroundColor: 'rgba(168, 171, 179, 0.2)',
+                    borderColor: 'rgba(168, 171, 179, 0.5)',
+                    borderWidth: 1,
+                    borderRadius: 4
+                },
+                {
+                    label: 'Inputted Stress',
+                    data: [0,0,0,0,0],
+                    backgroundColor: 'rgba(129, 236, 255, 0.8)',
+                    borderColor: '#81ecff',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { 
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#a8abb3' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#a8abb3', font: { size: 10 } }
+                }
+            },
+            plugins: {
+                legend: { labels: { color: '#f1f3fc' } }
+            },
+            animation: {
+                duration: 800,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
+
+    function collectData() {
+        const payload = {};
+        const inputs = document.querySelectorAll('.input-grp input');
+        inputs.forEach(input => {
+            payload[input.name] = parseFloat(input.value) || 0;
+        });
+        return payload;
+    }
+
+    function updateChart(data) {
+        const newData = chartFeatures.map(f => data[f] || 0);
+        myChart.data.datasets[1].data = newData;
+        myChart.update();
+    }
+
+    function updateUI(res) {
+        const isRed = res.color === 'red';
+        const pClass = isRed ? 'red' : 'green';
+        
+        document.getElementById('badge-icon').className = 'live-status-badge ' + pClass;
+        document.getElementById('pulse-dot').className = 'pulse-dot ' + pClass;
+        
+        const hero = document.getElementById('hero-status');
+        hero.className = 'hero-status ' + pClass;
+        document.getElementById('prediction-title').innerText = res.prediction.split(' ')[0];
+        document.getElementById('prediction-desc').innerText = res.prediction;
+        
+        const probVal = document.getElementById('prob-val');
+        probVal.className = 'val ' + pClass;
+        probVal.innerText = res.probability;
+
+        const stabVal = document.getElementById('stability-val');
+        stabVal.className = 'val ' + pClass;
+        stabVal.innerText = isRed ? 'Critical' : 'Stable';
+
+        if (res.color === 'red') {
+            myChart.data.datasets[1].backgroundColor = 'rgba(255, 113, 108, 0.8)';
+            myChart.data.datasets[1].borderColor = '#ff716c';
+        } else {
+            myChart.data.datasets[1].backgroundColor = 'rgba(47, 248, 1, 0.8)';
+            myChart.data.datasets[1].borderColor = '#2ff801';
+        }
+        myChart.update();
+
+        const actionsCont = document.getElementById('actions-container');
+        actionsCont.style.display = 'block';
+        const list = document.getElementById('action-cards-list');
+        list.innerHTML = '';
+        res.actions.forEach(act => {
+            list.innerHTML += `<div class="action-card">
+                <h4><div class="pulse-dot ${pClass}" style="display:inline-block;"></div> &nbsp; Insight</h4>
+                <p>${act}</p>
+            </div>`;
+        });
+    }
+
+    document.getElementById('predictBtn').addEventListener('click', () => {
+        const payload = collectData();
+        updateChart(payload);
+        
+        fetch('/api/predict', {
+            method: 'POST',
+            headers:{ 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(data.error) alert('Error: ' + data.error);
+            else updateUI(data);
+        });
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        document.getElementById('predictForm').reset();
+        
+        // Reset Chart to 0
+        myChart.data.datasets[1].data = [0,0,0,0,0];
+        myChart.data.datasets[1].backgroundColor = 'rgba(129, 236, 255, 0.8)';
+        myChart.data.datasets[1].borderColor = '#81ecff';
+        myChart.update();
+        
+        // Reset UI text
+        document.getElementById('badge-icon').className = 'live-status-badge green';
+        document.getElementById('pulse-dot').className = 'pulse-dot green';
+        document.getElementById('hero-status').className = 'hero-status green';
+        document.getElementById('prediction-title').innerText = 'STANDBY';
+        document.getElementById('prediction-desc').innerText = '(Awaiting Input Parameters)';
+        document.getElementById('prob-val').innerText = '--%';
+        document.getElementById('prob-val').className = 'val green';
+        document.getElementById('stability-val').innerText = '--';
+        document.getElementById('stability-val').className = 'val green';
+        document.getElementById('actions-container').style.display = 'none';
+        
+        // Populate standard normal levels automatically to make it easy
+        for(let key in normalLevels) {
+            let el = document.getElementById(key);
+            if(el) el.value = normalLevels[key];
+        }
+        
+        // Automatically chart the newly populated normal levels
+        const freshPayload = collectData();
+        updateChart(freshPayload);
+    });
+
+    // Populate normal levels on load so user doesn't have to type 16 variables from scratch
+    window.onload = () => {
+        for(let key in normalLevels) {
+            let el = document.getElementById(key);
+            if(el) el.value = normalLevels[key];
+        }
+        const freshPayload = collectData();
+        updateChart(freshPayload);
+    }
+</script>
 </body>
 </html>

@@ -39,6 +39,7 @@ We implemented models in two ways as required: first **without a pipeline** (man
 | RandomForest — No Pipeline (Manual Scaling) | ~0.99 | ~0.93 |
 | RandomForest — Pipeline (Default Params) | ~0.99 | ~0.93 |
 | RandomForest — Pipeline + Hyperparameter Tuning | ~0.99 | ~0.94 |
+| RandomForest — Pipeline + PCA (95% Variance) | ~0.97 | ~0.88 |
 | Literature Benchmark (ARIMA-based forecasting) [1] | ~0.85 | ~0.71 |
 
 **Note on Baseline F1 = 0.00**: The `DummyClassifier(strategy='prior')` always predicts the majority class (no stress, ~89% of data). While this gives high accuracy, it completely fails to detect any "Bad Stress" event — making its F1-Score for the minority class exactly 0. This demonstrates why accuracy alone is a misleading metric for imbalanced classification problems.
