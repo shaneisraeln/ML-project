@@ -7,9 +7,12 @@ from flask import send_from_directory
 
 app = Flask(__name__)
 
+# Define Base Directory dynamically
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # Load model and feature names
-MODEL_PATH = 'e:/ML project/model.pkl'
-FEATURES_PATH = 'e:/ML project/feature_names.pkl'
+MODEL_PATH = os.path.join(BASE_DIR, 'model.pkl')
+FEATURES_PATH = os.path.join(BASE_DIR, 'feature_names.pkl')
 
 if os.path.exists(MODEL_PATH):
     model = joblib.load(MODEL_PATH)
@@ -73,7 +76,7 @@ def api_predict():
 @app.route('/analytics', methods=['GET'])
 def analytics():
     # List images in data/visualizations
-    vis_dir = 'e:/ML project/data/visualizations'
+    vis_dir = os.path.join(BASE_DIR, 'data', 'visualizations')
     if os.path.exists(vis_dir):
         images = [f for f in os.listdir(vis_dir) if f.endswith('.png')]
     else:
@@ -84,7 +87,7 @@ def analytics():
 
 @app.route('/visualizations/<path:filename>')
 def serve_visualizations(filename):
-    return send_from_directory('e:/ML project/data/visualizations', filename)
+    return send_from_directory(os.path.join(BASE_DIR, 'data', 'visualizations'), filename)
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -134,5 +137,5 @@ def predict():
 
 if __name__ == '__main__':
     # Ensure templates dir exists
-    os.makedirs('e:/ML project/templates', exist_ok=True)
+    os.makedirs(os.path.join(BASE_DIR, 'templates'), exist_ok=True)
     app.run(debug=True, port=5000)
